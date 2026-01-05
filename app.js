@@ -7,6 +7,10 @@ let currentSongIndex = -1;
 let playlist = [];
 let playbackMode = 'random'; // order, single, random
 let isPlaying = false;
+let currentLyrics = [];
+let visibleLyricsCount = 7;
+let lyricLineHeight = 44;
+let isTouching = false;
 
 // DOM元素
 const coverContainer = document.getElementById('coverContainer');
@@ -37,6 +41,7 @@ const lyricsEmpty = document.getElementById('lyricsEmpty');
 const modeOrderBtn = document.getElementById('modeOrder');
 const modeSingleBtn = document.getElementById('modeSingle');
 const modeRandomBtn = document.getElementById('modeRandom');
+const loadingSpinner = document.getElementById('loadingSpinner');
 
 // 初始化
 function init() {
@@ -82,11 +87,23 @@ function init() {
     modeSingleBtn.addEventListener('click', () => setPlaybackMode('single'));
     modeRandomBtn.addEventListener('click', () => setPlaybackMode('random'));
     
+    // 计算歌词行高
+    calculateLyricLineHeight();
+    
     // 初始化播放列表
     updatePlaylistDisplay();
     
     // 初始化音频上下文
     initAudioContext();
+    
+    // 初始化触摸事件
+    initTouchEvents();
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', calculateLyricLineHeight);
+    
+    // 监听页面可见性变化
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     console.log("音乐播放器初始化完成");
 }
@@ -100,6 +117,35 @@ function initAudioContext() {
     }
 }
 
+// 计算歌词行高
+function calculateLyricLineHeight() {
+    // 根据屏幕尺寸调整可见歌词数量
+    if (window.innerWidth <= 480) {
+        visibleLyricsCount = 5;
+    } else if (window.innerHeight <= 500) {
+        visibleLyricsCount = 3;
+    } else {
+        visibleLyricsCount = 7;
+    }
+    
+    // 计算歌词行高
+    const tempLine = document.createElement('div');
+    tempLine.className = 'lyric-line';
+    tempLine.textContent = '测试文本';
+    tempLine.style.position = 'absolute';
+    tempLine.style.visibility = 'hidden';
+    document.body.appendChild(tempLine);
+    
+    const height = tempLine.offsetHeight;
+    if (height > 0) {
+        lyricLineHeight = height + 10;
+    }
+    
+    document.body.removeChild(tempLine);
+    
+    console.log(`歌词行高: ${lyricLineHeight}px, 可见行数: ${visibleLyricsCount}`);
+}
+
 // 处理文件选择
 async function handleFileSelect(event) {
     console.log("处理文件选择");
@@ -109,6 +155,9 @@ async function handleFileSelect(event) {
     // 清空文件输入
     event.target.value = '';
     
+    // 显示加载指示器
+    showLoading(true);
+    
     // 处理ZIP文件
     for (const file of files) {
         if (file.name.toLowerCase().endsWith('.zip')) {
@@ -117,6 +166,9 @@ async function handleFileSelect(event) {
             console.warn(`跳过非ZIP文件: ${file.name}`);
         }
     }
+    
+    // 隐藏加载指示器
+    showLoading(false);
     
     // 如果有歌曲添加到播放列表，播放第一首
     if (playlist.length > 0 && currentSongIndex === -1) {
@@ -133,11 +185,15 @@ async function handleFolderSelect(event) {
     // 清空文件输入
     event.target.value = '';
     
+    // 显示加载指示器
+    showLoading(true);
+    
     // 找出ZIP文件
     const zipFiles = files.filter(file => file.name.toLowerCase().endsWith('.zip'));
     
     if (zipFiles.length === 0) {
         alert("选择的文件夹中没有ZIP文件");
+        showLoading(false);
         return;
     }
     
@@ -147,6 +203,9 @@ async function handleFolderSelect(event) {
     for (const file of zipFiles) {
         await processZipFile(file);
     }
+    
+    // 隐藏加载指示器
+    showLoading(false);
     
     // 如果有歌曲添加到播放列表，播放第一首
     if (playlist.length > 0 && currentSongIndex === -1) {
@@ -320,6 +379,9 @@ async function playSong(index) {
     
     // 设置音频源
     audioElement.src = song.audioUrl;
+    
+    // 重置歌词
+    currentLyrics = [];
     
     try {
         // 加载音频
@@ -523,7 +585,7 @@ function updatePlaylistDisplay() {
     playlistCount.textContent = `${playlist.length} 首歌曲`;
 }
 
-// 更新歌词显示
+// 更新歌词显示 - 只显示部分歌词
 function updateLyricsDisplay() {
     lyricsScroll.innerHTML = '';
     
@@ -536,50 +598,146 @@ function updateLyricsDisplay() {
     
     lyricsEmpty.style.display = 'none';
     
-    song.lyrics.forEach((lyric, index) => {
-        const line = document.createElement('div');
-        line.className = 'lyric-line';
-        line.dataset.index = index;
-        line.dataset.time = lyric.time;
-        line.textContent = lyric.text;
-        
-        lyricsScroll.appendChild(line);
-    });
+    // 保存完整歌词
+    currentLyrics = song.lyrics;
+    
+    // 初始显示前几行歌词
+    renderLyricsSegment(0);
 }
 
-// 更新歌词高亮
+// 渲染歌词片段
+function renderLyricsSegment(startIndex) {
+    lyricsScroll.innerHTML = '';
+    
+    const halfVisible = Math.floor(visibleLyricsCount / 2);
+    
+    // 计算要显示的歌词范围
+    let start = Math.max(0, startIndex - halfVisible);
+    let end = Math.min(currentLyrics.length, start + visibleLyricsCount);
+    
+    // 如果歌词不足，调整开始位置
+    if (end - start < visibleLyricsCount) {
+        start = Math.max(0, end - visibleLyricsCount);
+    }
+    
+    // 创建歌词行
+    for (let i = start; i < end; i++) {
+        const lyric = currentLyrics[i];
+        const line = document.createElement('div');
+        line.className = 'lyric-line';
+        line.dataset.index = i;
+        line.dataset.time = lyric.time;
+        
+        // 如果有时间标签，显示时间
+        if (lyric.time !== null) {
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'lyric-time';
+            timeSpan.textContent = formatLyricTime(lyric.time);
+            line.appendChild(timeSpan);
+        }
+        
+        const textSpan = document.createElement('span');
+        textSpan.className = 'lyric-text';
+        textSpan.textContent = lyric.text;
+        line.appendChild(textSpan);
+        
+        lyricsScroll.appendChild(line);
+    }
+    
+    // 设置容器高度，确保垂直居中
+    const totalHeight = (end - start) * lyricLineHeight;
+    lyricsScroll.style.minHeight = `${totalHeight}px`;
+}
+
+// 格式化歌词时间
+function formatLyricTime(time) {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    const milliseconds = Math.floor((time % 1) * 100);
+    
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+}
+
+// 更新歌词高亮 - 优化版本
 function updateLyricsHighlight() {
+    if (!audioElement.duration || !currentLyrics.length) return;
+    
     const currentTime = audioElement.currentTime;
     const lines = lyricsScroll.querySelectorAll('.lyric-line');
     
-    // 找到当前应该高亮的歌词行
-    let activeIndex = -1;
+    if (lines.length === 0) return;
     
-    for (let i = 0; i < lines.length; i++) {
-        const time = parseFloat(lines[i].dataset.time);
-        if (time !== null && time <= currentTime) {
+    // 找到当前应该高亮的歌词行索引
+    let activeIndex = -1;
+    for (let i = 0; i < currentLyrics.length; i++) {
+        if (currentLyrics[i].time !== null && currentLyrics[i].time <= currentTime) {
             activeIndex = i;
         } else {
             break;
         }
     }
     
-    // 移除所有高亮
-    lines.forEach(line => line.classList.remove('active'));
-    
-    // 高亮当前行
+    // 如果找到了活动行
     if (activeIndex >= 0) {
-        lines[activeIndex].classList.add('active');
+        // 移除所有高亮
+        lines.forEach(line => {
+            line.classList.remove('active');
+            const textSpan = line.querySelector('.lyric-text');
+            if (textSpan) {
+                textSpan.style.color = '';
+                textSpan.style.fontWeight = '';
+            }
+        });
         
-        // 滚动到当前歌词行（使其居中）
-        const activeLine = lines[activeIndex];
-        const containerHeight = lyricsScroll.clientHeight;
-        const lineHeight = activeLine.offsetHeight;
-        const scrollTop = activeLine.offsetTop - containerHeight / 2 + lineHeight / 2;
+        // 检查活动行是否在当前显示的段落中
+        const firstVisibleIndex = parseInt(lines[0]?.dataset.index) || 0;
+        const lastVisibleIndex = parseInt(lines[lines.length - 1]?.dataset.index) || 0;
         
-        lyricsScroll.scrollTo({
-            top: scrollTop,
-            behavior: 'smooth'
+        // 如果活动行不在当前显示范围内，重新渲染以活动行为中心的段落
+        if (activeIndex < firstVisibleIndex || activeIndex > lastVisibleIndex) {
+            renderLyricsSegment(activeIndex);
+            
+            // 重新获取歌词行
+            const newLines = lyricsScroll.querySelectorAll('.lyric-line');
+            if (newLines.length > 0) {
+                // 找到并高亮活动行
+                for (let i = 0; i < newLines.length; i++) {
+                    const lineIndex = parseInt(newLines[i].dataset.index);
+                    if (lineIndex === activeIndex) {
+                        newLines[i].classList.add('active');
+                        const textSpan = newLines[i].querySelector('.lyric-text');
+                        if (textSpan) {
+                            textSpan.style.color = 'var(--accent-color)';
+                            textSpan.style.fontWeight = '600';
+                        }
+                        break;
+                    }
+                }
+            }
+        } else {
+            // 活动行在当前显示范围内，直接高亮
+            for (let i = 0; i < lines.length; i++) {
+                const lineIndex = parseInt(lines[i].dataset.index);
+                if (lineIndex === activeIndex) {
+                    lines[i].classList.add('active');
+                    const textSpan = lines[i].querySelector('.lyric-text');
+                    if (textSpan) {
+                        textSpan.style.color = 'var(--accent-color)';
+                        textSpan.style.fontWeight = '600';
+                    }
+                    break;
+                }
+            }
+        }
+    } else {
+        // 没有活动行，移除所有高亮
+        lines.forEach(line => {
+            line.classList.remove('active');
+            const textSpan = line.querySelector('.lyric-text');
+            if (textSpan) {
+                textSpan.style.color = '';
+                textSpan.style.fontWeight = '';
+            }
         });
     }
 }
@@ -666,6 +824,99 @@ function formatTime(seconds) {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// 显示/隐藏加载指示器
+function showLoading(show) {
+    if (show) {
+        loadingSpinner.style.display = 'block';
+    } else {
+        loadingSpinner.style.display = 'none';
+    }
+}
+
+// 初始化触摸事件
+function initTouchEvents() {
+    // 进度条触摸支持
+    progressBar.addEventListener('touchstart', handleTouchStart);
+    progressBar.addEventListener('touchmove', handleTouchMove);
+    progressBar.addEventListener('touchend', handleTouchEnd);
+    
+    // 防止歌词区域滚动时触发页面滚动
+    lyricsScroll.addEventListener('touchstart', function(e) {
+        if (lyricsScroll.scrollHeight > lyricsScroll.clientHeight) {
+            e.stopPropagation();
+        }
+    }, { passive: false });
+    
+    // 防止移动端下拉刷新
+    let startY = 0;
+    
+    document.addEventListener('touchstart', function(e) {
+        startY = e.touches[0].clientY;
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', function(e) {
+        // 如果正在触摸进度条，不阻止默认行为
+        if (isTouching) return;
+        
+        const touchY = e.touches[0].clientY;
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        
+        // 如果在顶部并且向下拉，阻止默认行为防止下拉刷新
+        if (scrollTop === 0 && touchY > startY) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+}
+
+// 触摸事件处理
+function handleTouchStart(e) {
+    isTouching = true;
+    seekToTouch(e);
+}
+
+function handleTouchMove(e) {
+    if (isTouching) {
+        e.preventDefault();
+        seekToTouch(e);
+    }
+}
+
+function handleTouchEnd() {
+    isTouching = false;
+    setTimeout(() => {
+        progressHandle.style.opacity = '0';
+    }, 1000);
+}
+
+// 触摸跳转
+function seekToTouch(e) {
+    if (!audioElement.duration) return;
+    
+    const touch = e.touches[0];
+    const rect = progressBar.getBoundingClientRect();
+    const touchX = touch.clientX - rect.left;
+    const width = rect.width;
+    const seekPercent = Math.min(Math.max(touchX / width, 0), 1);
+    
+    audioElement.currentTime = seekPercent * audioElement.duration;
+    
+    // 更新进度条
+    progress.style.width = `${seekPercent * 100}%`;
+    progressHandle.style.left = `${seekPercent * 100}%`;
+    progressHandle.style.opacity = '1';
+}
+
+// 处理页面可见性变化
+function handleVisibilityChange() {
+    if (document.hidden && isPlaying) {
+        // 页面隐藏时暂停音频
+        audioElement.pause();
+        isPlaying = false;
+        playIcon.className = 'fas fa-play';
+        coverContainer.classList.remove('playing');
+    }
 }
 
 // 页面加载完成后初始化
