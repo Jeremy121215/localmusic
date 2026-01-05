@@ -246,23 +246,18 @@ async function processZipFile(zipFile) {
             return;
         }
         
-        // 验证歌曲数据
-        let songsArray = [];
-        if (songData.songs && Array.isArray(songData.songs)) {
-            songsArray = songData.songs;
-        } else if (songData.song && Array.isArray(songData.song)) {
-            songsArray = songData.song;
-        } else {
+        // 验证歌曲数据 - 只支持 song 格式
+        if (!songData.song || !Array.isArray(songData.song)) {
             console.warn(`song.json格式不正确`);
-            alert(`ZIP文件 ${zipFile.name} 中的song.json格式不正确`);
+            alert(`ZIP文件 ${zipFile.name} 中的song.json格式不正确\n需要包含 song 数组`);
             return;
         }
         
-        console.log(`找到 ${songData.songs.length} 首歌曲`);
+        console.log(`找到 ${songData.song.length} 首歌曲`);
         
         // 处理每首歌曲
         let addedCount = 0;
-        for (const song of songData.songs) {
+        for (const song of songData.song) {
             // 验证必要字段
             if (!song.song_name || !song.song_file) {
                 console.warn('歌曲缺少必要字段，跳过');
