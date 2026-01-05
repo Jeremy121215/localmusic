@@ -215,7 +215,7 @@ async function handleFolderSelect(event) {
     }
 }
 
-// 处理ZIP文件
+// 处理ZIP文件 - 使用 song 格式
 async function processZipFile(zipFile) {
     try {
         console.log(`处理ZIP文件: ${zipFile.name}`);
@@ -246,7 +246,7 @@ async function processZipFile(zipFile) {
             return;
         }
         
-        // 验证歌曲数据 - 只支持 song 格式
+        // 验证歌曲数据 - 使用 song 格式
         if (!songData.song || !Array.isArray(songData.song)) {
             console.warn(`song.json格式不正确`);
             alert(`ZIP文件 ${zipFile.name} 中的song.json格式不正确\n需要包含 song 数组`);
