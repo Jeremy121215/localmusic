@@ -110,7 +110,9 @@
                     <div class="lyrics-container">
                         <div class="lyrics-scroll" id="lyricsScroll">
                             <div class="lyrics-empty" id="lyricsEmpty">
-                                暂无歌词
+                                <i class="fas fa-scroll"></i>
+                                <p>暂无歌词</p>
+                                <p>选择带有歌词的歌曲</p>
                             </div>
                         </div>
                     </div>
@@ -122,6 +124,9 @@
             <p>本地音乐播放器 &copy; 2023 | 所有音乐文件均在本地处理，不会上传到任何服务器</p>
         </footer>
     </div>
+
+    <!-- 加载指示器 -->
+    <div class="loading-spinner" id="loadingSpinner"></div>
 
     <!-- 引入JSZip库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
