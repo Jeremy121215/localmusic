@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地音乐播放器</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-music"></i> 本地音乐播放器</h1>
+            <p>支持从ZIP压缩包直接播放音乐，保持滚动歌词居中，多种播放模式</p>
+        </header>
+
+        <div class="main-content">
+            <div class="player-section">
+                <h2 class="section-title"><i class="fas fa-play-circle"></i> 正在播放</h2>
+                
+                <div class="cover-container" id="coverContainer">
+                    <div class="default-cover" id="defaultCover">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <img class="cover-image" id="coverImage" alt="专辑封面" style="display: none;">
+                </div>
+
+                <div class="song-info">
+                    <h2 class="song-title" id="songTitle">请选择音乐文件</h2>
+                    <p class="song-artist" id="songArtist">等待加载...</p>
+                </div>
+
+                <div class="progress-container">
+                    <div class="time-info">
+                        <span id="currentTime">00:00</span>
+                        <span id="totalTime">00:00</span>
+                    </div>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress" id="progress"></div>
+                        <div class="progress-handle" id="progressHandle"></div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="control-btn" id="prevBtn" title="上一首">
+                        <i class="fas fa-step-backward"></i>
+                    </button>
+                    <button class="control-btn play-pause" id="playPauseBtn" title="播放/暂停">
+                        <i class="fas fa-play" id="playIcon"></i>
+                    </button>
+                    <button class="control-btn" id="nextBtn" title="下一首">
+                        <i class="fas fa-step-forward"></i>
+                    </button>
+                </div>
+
+                <div class="playback-modes">
+                    <button class="mode-btn" id="modeOrder" data-mode="order" title="顺序播放">
+                        <i class="fas fa-list-ol"></i> 顺序
+                    </button>
+                    <button class="mode-btn" id="modeSingle" data-mode="single" title="单曲循环">
+                        <i class="fas fa-redo"></i> 单曲
+                    </button>
+                    <button class="mode-btn active" id="modeRandom" data-mode="random" title="随机播放">
+                        <i class="fas fa-random"></i> 随机
+                    </button>
+                </div>
+
+                <div class="file-actions">
+                    <div class="file-input-container">
+                        <button class="file-btn" id="openFileBtn">
+                            <i class="fas fa-folder-open"></i> 打开音乐文件
+                        </button>
+                        <button class="file-btn" id="openFolderBtn">
+                            <i class="fas fa-folder"></i> 打开文件夹
+                        </button>
+                        <button class="file-btn" id="clearPlaylistBtn">
+                            <i class="fas fa-trash-alt"></i> 清空列表
+                        </button>
+                    </div>
+                    <input type="file" id="fileInput" accept=".zip,.ZIP" multiple style="display: none;">
+                    <input type="file" id="folderInput" webkitdirectory multiple style="display: none;">
+                    <div class="hint">支持ZIP压缩包（包含song.json和音频文件）</div>
+                </div>
+            </div>
+
+            <div class="playlist-section">
+                <div class="playlist-header">
+                    <h2 class="section-title"><i class="fas fa-list"></i> 播放列表</h2>
+                    <div class="playlist-info">
+                        <span id="playlistCount">0 首歌曲</span>
+                        <button class="small-btn" id="shufflePlaylistBtn" title="随机播放列表">
+                            <i class="fas fa-random"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="playlist-container">
+                    <div class="playlist-scroll" id="playlistScroll">
+                        <!-- 播放列表项将在这里动态生成 -->
+                        <div class="playlist-empty" id="playlistEmpty">
+                            <i class="fas fa-music"></i>
+                            <p>播放列表为空</p>
+                            <p>请点击上方按钮添加音乐文件</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lyrics-section">
+                    <h2 class="section-title"><i class="fas fa-scroll"></i> 歌词</h2>
+                    <div class="lyrics-container">
+                        <div class="lyrics-scroll" id="lyricsScroll">
+                            <div class="lyrics-empty" id="lyricsEmpty">
+                                暂无歌词
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>本地音乐播放器 &copy; 2023 | 所有音乐文件均在本地处理，不会上传到任何服务器</p>
+        </footer>
+    </div>
+
+    <!-- 引入JSZip库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
