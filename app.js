@@ -214,9 +214,8 @@ async function handleFolderSelect(event) {
         playSong(0);
     }
 }
-
-// 处理ZIP文件 - 使用 song 格式
-async function processZipFile(zipFile) {
+/*
+处理ZIP文件 - 使用 song 格式格式sync function processZipFile(zipFile) {
     try {
         console.log("=== 开始处理ZIP文件 ===");
         console.log("文件名:", zipFile.name);
@@ -416,6 +415,69 @@ async function processZipFile(zipFile) {
         console.error('处理ZIP文件时出错:', error);
         console.error('错误堆栈:', error.stack);
         alert(`处理文件 ${zipFile.name} 时出错:\n${error.message}`);
+    }
+}*/
+
+// processZipFile 函数的简化版本
+async function processZipFile(zipFile) {
+    console.log("=== 简化版本 ===");
+    
+    try {
+        const zip = new JSZip();
+        const zipContent = await zip.loadAsync(zipFile);
+        
+        // 列出所有文件
+        const files = [];
+        for (const fileName in zipContent.files) {
+            const file = zipContent.files[fileName];
+            if (!file.dir) {
+                files.push(fileName);
+                console.log("文件:", fileName);
+            }
+        }
+        
+        // 寻找JSON文件
+        const jsonFile = files.find(f => f.includes('.json'));
+        if (!jsonFile) {
+            alert("没有找到JSON文件");
+            return;
+        }
+        
+        // 读取JSON
+        const jsonText = await zipContent.files[jsonFile].async('string');
+        const data = JSON.parse(jsonText);
+        
+        // 处理歌曲
+        const songs = data.song || data.songs || [];
+        
+        for (const song of songs) {
+            // 寻找音频文件（模糊匹配）
+            const audioFile = files.find(f => 
+                f.toLowerCase().includes(song.song_file.toLowerCase().replace('.mp3', ''))
+            );
+            
+            if (audioFile) {
+                const audioBlob = await zipContent.files[audioFile].async('blob');
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                playlist.push({
+                    title: song.song_name,
+                    artist: song.song_author || '未知',
+                    audioUrl: audioUrl,
+                    zipName: zipFile.name
+                });
+                
+                console.log("添加成功:", song.song_name);
+            } else {
+                console.log("未找到文件:", song.song_file, "可用文件:", files);
+            }
+        }
+        
+        updatePlaylistDisplay();
+        
+    } catch (error) {
+        console.error("错误:", error);
+        alert("错误: " + error.message);
     }
 }
 
