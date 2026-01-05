@@ -247,7 +247,12 @@ async function processZipFile(zipFile) {
         }
         
         // 验证歌曲数据
-        if (!songData.songs || !Array.isArray(songData.songs)) {
+        let songsArray = [];
+        if (songData.songs && Array.isArray(songData.songs)) {
+            songsArray = songData.songs;
+        } else if (songData.song && Array.isArray(songData.song)) {
+            songsArray = songData.song;
+        } else {
             console.warn(`song.json格式不正确`);
             alert(`ZIP文件 ${zipFile.name} 中的song.json格式不正确`);
             return;
