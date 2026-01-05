@@ -11,6 +11,8 @@ let currentLyrics = [];
 let visibleLyricsCount = 7;
 let lyricLineHeight = 44;
 let isTouching = false;
+let lastActiveLyricIndex = -1;
+let lyricsUpdateInterval = null;
 
 // DOM元素
 const coverContainer = document.getElementById('coverContainer');
@@ -369,6 +371,13 @@ async function playSong(index) {
         coverContainer.classList.remove('playing');
     }
     
+    // 重置歌词状态
+    lastActiveLyricIndex = -1;
+    if (lyricsUpdateInterval) {
+        clearInterval(lyricsUpdateInterval);
+        lyricsUpdateInterval = null;
+    }
+    
     // 更新当前歌曲索引
     currentSongIndex = index;
     const song = playlist[index];
@@ -409,6 +418,9 @@ async function playSong(index) {
         playIcon.className = 'fas fa-pause';
         coverContainer.classList.add('playing');
         
+        // 开始歌词更新循环
+        startLyricsUpdate();
+        
         console.log("开始播放歌曲");
     } catch (error) {
         console.error('播放失败:', error);
@@ -416,6 +428,20 @@ async function playSong(index) {
         playIcon.className = 'fas fa-play';
         alert(`播放失败: ${error.message}`);
     }
+}
+
+// 开始歌词更新循环
+function startLyricsUpdate() {
+    if (lyricsUpdateInterval) {
+        clearInterval(lyricsUpdateInterval);
+    }
+    
+    // 每50ms更新一次歌词，确保流畅
+    lyricsUpdateInterval = setInterval(() => {
+        if (isPlaying && currentLyrics.length > 0) {
+            updateLyricsHighlight();
+        }
+    }, 50);
 }
 
 // 切换播放/暂停
@@ -430,11 +456,20 @@ function togglePlayPause() {
         playIcon.className = 'fas fa-play';
         coverContainer.classList.remove('playing');
         isPlaying = false;
+        
+        // 停止歌词更新循环
+        if (lyricsUpdateInterval) {
+            clearInterval(lyricsUpdateInterval);
+            lyricsUpdateInterval = null;
+        }
     } else {
         audioElement.play().then(() => {
             playIcon.className = 'fas fa-pause';
             coverContainer.classList.add('playing');
             isPlaying = true;
+            
+            // 开始歌词更新循环
+            startLyricsUpdate();
         }).catch(error => {
             console.error('播放失败:', error);
             alert(`播放失败: ${error.message}`);
@@ -529,8 +564,10 @@ function updateProgress() {
     
     currentTimeEl.textContent = formatTime(audioElement.currentTime);
     
-    // 更新歌词滚动
-    updateLyricsHighlight();
+    // 更新歌词高亮（这里也会调用，但为了双重保险）
+    if (currentLyrics.length > 0) {
+        updateLyricsHighlight();
+    }
 }
 
 // 跳转到指定位置
@@ -547,6 +584,11 @@ function seekToPosition(event) {
     // 更新进度条
     progress.style.width = `${seekPercent * 100}%`;
     progressHandle.style.left = `${seekPercent * 100}%`;
+    
+    // 强制更新歌词显示
+    if (currentLyrics.length > 0) {
+        updateLyricsHighlight();
+    }
 }
 
 // 更新播放列表显示
@@ -660,7 +702,9 @@ function formatLyricTime(time) {
 
 // 更新歌词高亮 - 优化版本
 function updateLyricsHighlight() {
-    if (!audioElement.duration || !currentLyrics.length) return;
+    if (!audioElement || !audioElement.duration || !currentLyrics.length) {
+        return;
+    }
     
     const currentTime = audioElement.currentTime;
     const lines = lyricsScroll.querySelectorAll('.lyric-line');
@@ -671,22 +715,34 @@ function updateLyricsHighlight() {
     let activeIndex = -1;
     for (let i = 0; i < currentLyrics.length; i++) {
         if (currentLyrics[i].time !== null && currentLyrics[i].time <= currentTime) {
-            activeIndex = i;
-        } else {
-            break;
+            // 如果下一行的时间大于当前时间，或者这是最后一行，就高亮这一行
+            if (i === currentLyrics.length - 1 || 
+                currentLyrics[i + 1].time === null || 
+                currentLyrics[i + 1].time > currentTime) {
+                activeIndex = i;
+                break;
+            }
         }
     }
+    
+    // 如果没有找到带时间的歌词行，显示第一行
+    if (activeIndex === -1 && currentLyrics.length > 0) {
+        activeIndex = 0;
+    }
+    
+    // 如果当前活动行没有变化，直接返回（优化性能）
+    if (activeIndex === lastActiveLyricIndex) {
+        return;
+    }
+    
+    // 更新最后活动行索引
+    lastActiveLyricIndex = activeIndex;
     
     // 如果找到了活动行
     if (activeIndex >= 0) {
         // 移除所有高亮
         lines.forEach(line => {
             line.classList.remove('active');
-            const textSpan = line.querySelector('.lyric-text');
-            if (textSpan) {
-                textSpan.style.color = '';
-                textSpan.style.fontWeight = '';
-            }
         });
         
         // 检查活动行是否在当前显示的段落中
@@ -705,11 +761,6 @@ function updateLyricsHighlight() {
                     const lineIndex = parseInt(newLines[i].dataset.index);
                     if (lineIndex === activeIndex) {
                         newLines[i].classList.add('active');
-                        const textSpan = newLines[i].querySelector('.lyric-text');
-                        if (textSpan) {
-                            textSpan.style.color = 'var(--accent-color)';
-                            textSpan.style.fontWeight = '600';
-                        }
                         break;
                     }
                 }
@@ -720,11 +771,6 @@ function updateLyricsHighlight() {
                 const lineIndex = parseInt(lines[i].dataset.index);
                 if (lineIndex === activeIndex) {
                     lines[i].classList.add('active');
-                    const textSpan = lines[i].querySelector('.lyric-text');
-                    if (textSpan) {
-                        textSpan.style.color = 'var(--accent-color)';
-                        textSpan.style.fontWeight = '600';
-                    }
                     break;
                 }
             }
@@ -733,11 +779,6 @@ function updateLyricsHighlight() {
         // 没有活动行，移除所有高亮
         lines.forEach(line => {
             line.classList.remove('active');
-            const textSpan = line.querySelector('.lyric-text');
-            if (textSpan) {
-                textSpan.style.color = '';
-                textSpan.style.fontWeight = '';
-            }
         });
     }
 }
@@ -753,6 +794,12 @@ function clearPlaylist() {
             audioElement.src = '';
         }
         
+        // 停止歌词更新循环
+        if (lyricsUpdateInterval) {
+            clearInterval(lyricsUpdateInterval);
+            lyricsUpdateInterval = null;
+        }
+        
         // 释放Blob URL
         playlist.forEach(song => {
             if (song.audioUrl) URL.revokeObjectURL(song.audioUrl);
@@ -765,6 +812,8 @@ function clearPlaylist() {
         isPlaying = false;
         playIcon.className = 'fas fa-play';
         coverContainer.classList.remove('playing');
+        lastActiveLyricIndex = -1;
+        currentLyrics = [];
         
         // 重置UI
         songTitle.textContent = '请选择音乐文件';
@@ -810,6 +859,12 @@ function shufflePlaylist() {
 // 处理音频错误
 function handleAudioError(error) {
     console.error('音频播放错误:', error);
+    
+    // 停止歌词更新循环
+    if (lyricsUpdateInterval) {
+        clearInterval(lyricsUpdateInterval);
+        lyricsUpdateInterval = null;
+    }
     
     // 尝试播放下一首
     if (playlist.length > 0) {
@@ -906,6 +961,11 @@ function seekToTouch(e) {
     progress.style.width = `${seekPercent * 100}%`;
     progressHandle.style.left = `${seekPercent * 100}%`;
     progressHandle.style.opacity = '1';
+    
+    // 强制更新歌词显示
+    if (currentLyrics.length > 0) {
+        updateLyricsHighlight();
+    }
 }
 
 // 处理页面可见性变化
@@ -916,6 +976,22 @@ function handleVisibilityChange() {
         isPlaying = false;
         playIcon.className = 'fas fa-play';
         coverContainer.classList.remove('playing');
+        
+        // 停止歌词更新循环
+        if (lyricsUpdateInterval) {
+            clearInterval(lyricsUpdateInterval);
+            lyricsUpdateInterval = null;
+        }
+    } else if (!document.hidden && !isPlaying && currentSongIndex >= 0) {
+        // 页面重新显示时，如果之前有歌曲在播放，重新开始播放
+        audioElement.play().then(() => {
+            isPlaying = true;
+            playIcon.className = 'fas fa-pause';
+            coverContainer.classList.add('playing');
+            
+            // 重新开始歌词更新循环
+            startLyricsUpdate();
+        });
     }
 }
 
@@ -932,6 +1008,12 @@ window.addEventListener('beforeunload', () => {
         if (song.audioUrl) URL.revokeObjectURL(song.audioUrl);
         if (song.coverUrl) URL.revokeObjectURL(song.coverUrl);
     });
+    
+    // 停止歌词更新循环
+    if (lyricsUpdateInterval) {
+        clearInterval(lyricsUpdateInterval);
+        lyricsUpdateInterval = null;
+    }
     
     // 关闭音频上下文
     if (audioContext && audioContext.state !== 'closed') {
