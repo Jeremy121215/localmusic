@@ -214,178 +214,109 @@ async function handleFolderSelect(event) {
         playSong(0);
     }
 }
-/*
-处理ZIP文件 - 使用 song 格式格式sync function processZipFile(zipFile) {
+
+// 处理ZIP文件
+async function processZipFile(zipFile) {
     try {
-        console.log("=== 开始处理ZIP文件 ===");
-        console.log("文件名:", zipFile.name);
-        console.log("文件大小:", zipFile.size, "bytes");
+        console.log(`处理ZIP文件: ${zipFile.name}`);
         
         // 使用JSZip解压
         const zip = new JSZip();
-        console.log("正在加载ZIP文件...");
         const zipContent = await zip.loadAsync(zipFile);
         
-        // 输出ZIP中的所有文件
-        console.log("=== ZIP文件内容 ===");
-        const fileNames = Object.keys(zipContent.files);
-        console.log("总文件数:", fileNames.length);
-        fileNames.forEach((fileName, index) => {
-            const file = zipContent.files[fileName];
-            console.log(`${index + 1}. ${fileName} (目录: ${file.dir}, 大小: ${file.uncompressedSize} bytes)`);
-        });
-        
-        // 查找song.json文件 - 更灵活的查找
-        let jsonFile = null;
-        for (const fileName of fileNames) {
-            if (fileName.toLowerCase().endsWith('.json') || 
-                fileName.toLowerCase().includes('song')) {
-                console.log("找到JSON文件:", fileName);
-                jsonFile = fileName;
-                break;
-            }
-        }
+        // 查找song.json文件
+        const jsonFile = Object.keys(zipContent.files).find(name => 
+            name.toLowerCase().includes('song.json'));
         
         if (!jsonFile) {
-            console.error("未找到song.json文件");
-            alert(`ZIP文件 ${zipFile.name} 中未找到song.json文件\n请确保ZIP包中包含song.json文件`);
+            console.warn(`ZIP文件 ${zipFile.name} 中未找到song.json`);
+            alert(`ZIP文件 ${zipFile.name} 中未找到song.json文件`);
             return;
         }
-        
-        console.log(`使用JSON文件: ${jsonFile}`);
         
         // 读取JSON文件
         const jsonContent = await zipContent.files[jsonFile].async('string');
-        console.log("JSON内容:", jsonContent.substring(0, 200) + "...");
-        
         let songData;
+        
         try {
             songData = JSON.parse(jsonContent);
         } catch (e) {
-            console.error(`解析song.json失败:`, e);
-            console.error("JSON内容:", jsonContent);
-            alert(`ZIP文件 ${zipFile.name} 中的song.json格式错误\n错误: ${e.message}`);
+            console.error(`解析song.json失败: ${e}`);
+            alert(`ZIP文件 ${zipFile.name} 中的song.json格式错误`);
             return;
         }
         
-        // 验证歌曲数据 - 支持多种格式
-        let songsArray = null;
-        
-        if (songData.song && Array.isArray(songData.song)) {
-            songsArray = songData.song;
-            console.log("使用 song 格式");
-        } else if (songData.songs && Array.isArray(songData.songs)) {
+        // 验证歌曲数据 - 支持 songs 和 song 两种格式
+        let songsArray = [];
+        if (songData.songs && Array.isArray(songData.songs)) {
             songsArray = songData.songs;
-            console.log("使用 songs 格式");
+        } else if (songData.song && Array.isArray(songData.song)) {
+            songsArray = songData.song;
         } else {
-            console.error("song.json格式不正确，内容:", songData);
-            alert(`ZIP文件 ${zipFile.name} 中的song.json格式不正确\n需要包含 song 或 songs 数组`);
+            console.warn(`song.json格式不正确`);
+            alert(`ZIP文件 ${zipFile.name} 中的song.json格式不正确`);
             return;
         }
-        
+
         console.log(`找到 ${songsArray.length} 首歌曲`);
-        
+
         // 处理每首歌曲
         let addedCount = 0;
         for (const song of songsArray) {
-            console.log("=== 处理歌曲 ===");
-            console.log("歌曲信息:", song);
-            
             // 验证必要字段
             if (!song.song_name || !song.song_file) {
-                console.warn('歌曲缺少必要字段，跳过:', song);
+                console.warn('歌曲缺少必要字段，跳过');
                 continue;
             }
-            
-            console.log("歌曲名:", song.song_name);
-            console.log("音频文件:", song.song_file);
-            console.log("封面文件:", song.cover_file);
-            
-            // 查找音频文件 - 更灵活的方式
-            let audioFile = null;
-            let audioFileName = null;
-            
-            // 方法1：精确匹配
-            audioFile = zipContent.files[song.song_file];
-            if (audioFile && !audioFile.dir) {
-                audioFileName = song.song_file;
-                console.log("方法1: 精确匹配找到音频文件");
-            } 
-            // 方法2：不区分大小写查找
-            else {
-                const lowerCaseFileName = song.song_file.toLowerCase();
-                for (const fileName of fileNames) {
-                    if (!zipContent.files[fileName].dir && 
-                        fileName.toLowerCase() === lowerCaseFileName) {
-                        audioFile = zipContent.files[fileName];
-                        audioFileName = fileName;
-                        console.log(`方法2: 不区分大小写找到 ${fileName}`);
-                        break;
-                    }
+
+            // 从ZIP中提取音频文件
+            const audioFileName = song.song_file;
+            console.log(`查找音频文件: "${audioFileName}"`);
+
+            // 调试：显示ZIP中的所有文件
+            const allFiles = Object.keys(zipContent.files);
+            console.log(`ZIP中的文件: ${allFiles.join(', ')}`);
+
+            // 尝试多种路径格式
+            let audioFile = zipContent.files[audioFileName];
+            if (!audioFile || audioFile.dir) {
+                // 尝试去掉目录前缀
+                const fileNameOnly = audioFileName.split('/').pop();
+                audioFile = zipContent.files[fileNameOnly];
+                if (audioFile && !audioFile.dir) {
+                    console.log(`使用文件名找到: ${fileNameOnly}`);
                 }
             }
-            // 方法3：部分匹配
-            if (!audioFile) {
-                for (const fileName of fileNames) {
-                    if (!zipContent.files[fileName].dir && 
-                        fileName.toLowerCase().includes(song.song_file.toLowerCase())) {
-                        audioFile = zipContent.files[fileName];
-                        audioFileName = fileName;
-                        console.log(`方法3: 部分匹配找到 ${fileName}`);
-                        break;
-                    }
+            if (!audioFile || audioFile.dir) {
+                // 尝试在所有文件中模糊匹配
+                const matchedFileName = allFiles.find(f => f.endsWith(audioFileName));
+                if (matchedFileName) {
+                    audioFile = zipContent.files[matchedFileName];
+                    console.log(`模糊匹配找到: ${matchedFileName}`);
                 }
             }
-            
-            if (!audioFile || !audioFileName) {
-                console.error(`音频文件未找到: ${song.song_file}`);
-                console.log("ZIP中所有文件:", fileNames);
-                alert(`在ZIP文件中未找到音频文件: ${song.song_file}\n请确保文件在ZIP包的根目录下`);
+
+            if (!audioFile || audioFile.dir) {
+                console.warn(`音频文件未找到: ${audioFileName}`);
                 continue;
             }
-            
-            console.log(`找到音频文件: ${audioFileName}, 大小: ${audioFile.uncompressedSize} bytes`);
             
             // 提取封面文件（如果有）
             let coverUrl = null;
             if (song.cover_file) {
-                let coverFile = null;
-                let coverFileName = null;
-                
-                // 查找封面文件
-                coverFile = zipContent.files[song.cover_file];
-                if (!coverFile || coverFile.dir) {
-                    // 尝试不区分大小写查找
-                    const lowerCaseCoverName = song.cover_file.toLowerCase();
-                    for (const fileName of fileNames) {
-                        if (!zipContent.files[fileName].dir && 
-                            fileName.toLowerCase() === lowerCaseCoverName) {
-                            coverFile = zipContent.files[fileName];
-                            coverFileName = fileName;
-                            break;
-                        }
-                    }
-                }
-                
+                const coverFile = zipContent.files[song.cover_file];
                 if (coverFile && !coverFile.dir) {
-                    console.log(`找到封面文件: ${coverFileName || song.cover_file}`);
                     const coverBlob = await coverFile.async('blob');
                     coverUrl = URL.createObjectURL(coverBlob);
-                } else {
-                    console.warn(`封面文件未找到: ${song.cover_file}`);
                 }
             }
             
             // 创建音频Blob URL
-            console.log("正在读取音频文件...");
             const audioBlob = await audioFile.async('blob');
-            console.log("音频Blob大小:", audioBlob.size, "bytes");
             const audioUrl = URL.createObjectURL(audioBlob);
-            console.log("音频URL创建成功");
             
             // 解析歌词（如果有）
             const lyrics = parseLyrics(song.song_lyric || '');
-            console.log("解析到歌词行数:", lyrics.length);
             
             // 添加到播放列表
             playlist.push({
@@ -397,87 +328,20 @@ async function handleFolderSelect(event) {
                 lyrics: lyrics,
                 hasScrollLyric: song.has_scroll_lyric || false,
                 duration: 0, // 将在加载音频后设置
-                zipName: zipFile.name.replace('.zip', ''),
-                originalFileName: audioFileName // 保存实际找到的文件名
+                zipName: zipFile.name.replace('.zip', '')
             });
             
             addedCount++;
-            console.log(`歌曲 "${song.song_name}" 添加成功`);
         }
         
         // 更新播放列表显示
         updatePlaylistDisplay();
         
         console.log(`从 ${zipFile.name} 添加了 ${addedCount} 首歌曲`);
-        alert(`成功添加 ${addedCount} 首歌曲到播放列表`);
         
     } catch (error) {
         console.error('处理ZIP文件时出错:', error);
-        console.error('错误堆栈:', error.stack);
-        alert(`处理文件 ${zipFile.name} 时出错:\n${error.message}`);
-    }
-}*/
-
-// processZipFile 函数的简化版本
-async function processZipFile(zipFile) {
-    console.log("=== 简化版本 ===");
-    
-    try {
-        const zip = new JSZip();
-        const zipContent = await zip.loadAsync(zipFile);
-        
-        // 列出所有文件
-        const files = [];
-        for (const fileName in zipContent.files) {
-            const file = zipContent.files[fileName];
-            if (!file.dir) {
-                files.push(fileName);
-                console.log("文件:", fileName);
-            }
-        }
-        
-        // 寻找JSON文件
-        const jsonFile = files.find(f => f.includes('.json'));
-        if (!jsonFile) {
-            alert("没有找到JSON文件");
-            return;
-        }
-        
-        // 读取JSON
-        const jsonText = await zipContent.files[jsonFile].async('string');
-        const data = JSON.parse(jsonText);
-        
-        // 处理歌曲
-        const songs = data.song || data.songs || [];
-        
-        for (const song of songs) {
-            // 寻找音频文件（模糊匹配）
-            const audioFile = files.find(f => 
-                f.toLowerCase().includes(song.song_file.toLowerCase().replace('.mp3', ''))
-            );
-            
-            if (audioFile) {
-                const audioBlob = await zipContent.files[audioFile].async('blob');
-                const audioUrl = URL.createObjectURL(audioBlob);
-                
-                playlist.push({
-                    title: song.song_name,
-                    artist: song.song_author || '未知',
-                    audioUrl: audioUrl,
-                    zipName: zipFile.name
-                });
-                
-                console.log("添加成功:", song.song_name);
-            } else {
-                console.log("未找到文件:", song.song_file, "可用文件:", files);
-            }
-        }
-        
-        updatePlaylistDisplay();
-        
-    } catch (error) {
-        console.error("错误:", error);
-        alert("错误: " + error.message);
+        alert(`处理文件 ${zipFile.name} 时出错: ${error.message}`);
     }
 }
 
