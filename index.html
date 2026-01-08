@@ -81,9 +81,9 @@
                             <i class="fas fa-tools"></i> 工具箱
                         </button>
                     </div>
-                    <input type="file" id="fileInput" accept=".zip,.ZIP" multiple style="display: none;">
+                    <input type="file" id="fileInput" accept=".lm,.zip" multiple style="display: none;">
                     <input type="file" id="folderInput" webkitdirectory multiple style="display: none;">
-                    <div class="hint">支持ZIP压缩包（包含song.json和音频文件）</div>
+                    <div class="hint">支持 ZIP、LM 文件格式</div>
                 </div>
             </div>
 
@@ -124,7 +124,7 @@
         </div>
 
         <footer>
-            <p>本地音乐播放器 v1.0.30 &copy; 2026 | 所有音乐文件均在本地处理，不会上传到任何服务器</p>
+            <p>本地音乐播放器 v1.0.31 &copy; 2026 | 所有音乐文件均在本地处理，不会上传到任何服务器</p>
         </footer>
     </div>
 
@@ -147,7 +147,7 @@
                     </div>
                     <div class="tool-info">
                         <h3>自定义音乐</h3>
-                        <p>创建并打包自定义音乐ZIP</p>
+                        <p>创建并打包自定义音乐 LM 文件</p>
                     </div>
                     <i class="fas fa-chevron-right tool-arrow"></i>
                 </div>
@@ -187,17 +187,17 @@
                 </div>
                 <div class="form-group">
                     <label for="customAudioFile">音频文件 *</label>
-                    <input type="file" id="customAudioFile" accept=".mp3,.MP3,.wav,.WAV,.ogg,.OGG,.m4a,.M4A" required>
+                    <input type="file" id="customAudioFile" accept=".mp3,.wav,.ogg,.m4a" required>
                 </div>
                 <div class="form-group">
                     <label for="customCoverFile">封面图片</label>
-                    <input type="file" id="customCoverFile" accept=".png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.gif,.GIF">
+                    <input type="file" id="customCoverFile" accept=".png,.jpg,.jpeg,.gif">
                     <small>可选，不上传则使用默认封面</small>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="submit-btn" id="generateZipBtn">
-                        <i class="fas fa-file-archive"></i> 生成ZIP文件
-                    </button>
+                            <i class="fas fa-file-archive"></i> 生成LM文件
+                        </button>
                 </div>
             </form>
         </div>
