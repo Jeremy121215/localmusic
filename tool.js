@@ -39,6 +39,13 @@
             });
         }
 
+        if (document.getElementById('musicDownloadTool')) {
+            document.getElementById('musicDownloadTool').addEventListener('click', () => {
+                window.open('https://jeremy121215.github.io/download/download.html?category=music', '_blank');
+                toolboxModal.classList.remove('show');
+            });
+        }
+
         if (backToToolbox) {
             backToToolbox.addEventListener('click', () => {
                 customMusicPanel.classList.remove('show');
@@ -115,22 +122,22 @@
                 const url = URL.createObjectURL(content);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${songName}.zip`;
+                a.download = `${songName}.lm`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                alert(`已成功生成 ${songName}.zip`);
+                alert(`已成功生成 ${songName}.lm`);
                 customMusicForm.reset();
                 customMusicPanel.classList.remove('show');
 
             } catch (error) {
-                console.error('生成ZIP失败:', error);
-                alert(`生成ZIP失败: ${error.message}`);
+                console.error('生成LM失败:', error);
+                alert(`生成LM失败: ${error.message}`);
             } finally {
                 generateZipBtn.disabled = false;
-                generateZipBtn.innerHTML = '<i class="fas fa-file-archive"></i> 生成ZIP文件';
+                generateZipBtn.innerHTML = '<i class="fas fa-file-archive"></i> 生成LM文件';
             }
         }
 
