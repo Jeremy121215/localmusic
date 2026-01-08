@@ -77,6 +77,9 @@
                         <button class="file-btn" id="clearPlaylistBtn">
                             <i class="fas fa-trash-alt"></i> 清空列表
                         </button>
+                        <button class="file-btn" id="toolboxBtn">
+                            <i class="fas fa-tools"></i> 工具箱
+                        </button>
                     </div>
                     <input type="file" id="fileInput" accept=".zip,.ZIP" multiple style="display: none;">
                     <input type="file" id="folderInput" webkitdirectory multiple style="display: none;">
@@ -121,15 +124,88 @@
         </div>
 
         <footer>
-            <p>本地音乐播放器 &copy; 2023 | 所有音乐文件均在本地处理，不会上传到任何服务器</p>
+            <p>本地音乐播放器 v1.0.30 &copy; 2026 | 所有音乐文件均在本地处理，不会上传到任何服务器</p>
         </footer>
     </div>
 
     <!-- 加载指示器 -->
     <div class="loading-spinner" id="loadingSpinner"></div>
 
+    <!-- 工具箱浮窗 -->
+    <div class="toolbox-modal" id="toolboxModal">
+        <div class="toolbox-content">
+            <div class="toolbox-header">
+                <h2><i class="fas fa-tools"></i> 工具箱</h2>
+                <button class="toolbox-close" id="toolboxClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="toolbox-body">
+                <div class="tool-item" id="customMusicTool">
+                    <div class="tool-icon">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <div class="tool-info">
+                        <h3>自定义音乐</h3>
+                        <p>创建并打包自定义音乐ZIP</p>
+                    </div>
+                    <i class="fas fa-chevron-right tool-arrow"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义音乐工具面板 -->
+    <div class="custom-music-panel" id="customMusicPanel">
+        <div class="panel-header">
+            <button class="back-btn" id="backToToolbox">
+                <i class="fas fa-arrow-left"></i> 返回工具箱
+            </button>
+            <h2><i class="fas fa-music"></i> 自定义音乐</h2>
+        </div>
+        <div class="panel-body">
+            <form id="customMusicForm">
+                <div class="form-group">
+                    <label for="customSongName">歌曲名称 *</label>
+                    <input type="text" id="customSongName" required placeholder="输入歌曲名称">
+                </div>
+                <div class="form-group">
+                    <label for="customArtist">歌手</label>
+                    <input type="text" id="customArtist" placeholder="输入歌手名称（可选）">
+                </div>
+                <div class="form-group">
+                    <label for="customHasLyric">是否有滚动歌词</label>
+                    <select id="customHasLyric">
+                        <option value="false">无滚动歌词</option>
+                        <option value="true">有滚动歌词</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="customLyrics">歌词</label>
+                    <textarea id="customLyrics" rows="6" placeholder="输入歌词（每行一行，无需时间标签）"></textarea>
+                    <small>提示：直接输入歌词，每行一行。支持中文逗号、句号。</small>
+                </div>
+                <div class="form-group">
+                    <label for="customAudioFile">音频文件 *</label>
+                    <input type="file" id="customAudioFile" accept=".mp3,.MP3,.wav,.WAV,.ogg,.OGG,.m4a,.M4A" required>
+                </div>
+                <div class="form-group">
+                    <label for="customCoverFile">封面图片</label>
+                    <input type="file" id="customCoverFile" accept=".png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.gif,.GIF">
+                    <small>可选，不上传则使用默认封面</small>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn" id="generateZipBtn">
+                        <i class="fas fa-file-archive"></i> 生成ZIP文件
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- 引入JSZip库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="app.js"></script>
+    <script src="tool.js"></script>
 </body>
 </html>
