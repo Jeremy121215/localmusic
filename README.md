@@ -1,6 +1,7 @@
 # 本地音乐播放器
 
 一个基于Web的本地音乐播放器，支持从ZIP压缩包直接播放音乐，无需上传到服务器。
+网址：https://jeremy121215.github.io/localmusic/
 
 ## 功能特性
 
