@@ -46,6 +46,32 @@
             });
         }
 
+        // 控制滚动歌词选项的显示/隐藏
+        if (document.getElementById('customHasLyric')) {
+            const customHasLyric = document.getElementById('customHasLyric');
+            const scrollLyricGroup = document.getElementById('scrollLyricGroup');
+            const customLyrics = document.getElementById('customLyrics');
+
+            customHasLyric.addEventListener('change', () => {
+                if (customHasLyric.value === 'true') {
+                    scrollLyricGroup.style.display = 'block';
+                    customLyrics.disabled = false;
+                } else {
+                    scrollLyricGroup.style.display = 'none';
+                    customLyrics.disabled = true;
+                }
+            });
+
+            // 初始化状态
+            if (customHasLyric.value === 'true') {
+                scrollLyricGroup.style.display = 'block';
+                customLyrics.disabled = false;
+            } else {
+                scrollLyricGroup.style.display = 'none';
+                customLyrics.disabled = true;
+            }
+        }
+
         if (backToToolbox) {
             backToToolbox.addEventListener('click', () => {
                 customMusicPanel.classList.remove('show');
@@ -62,6 +88,7 @@
             const songName = document.getElementById('customSongName').value.trim();
             const artist = document.getElementById('customArtist').value.trim();
             const hasLyric = document.getElementById('customHasLyric').value === 'true';
+            const isScrollLyric = hasLyric ? document.getElementById('customScrollLyric').value === 'true' : false;
             const lyricsText = document.getElementById('customLyrics').value.trim();
             const audioFile = document.getElementById('customAudioFile').files[0];
             const coverFile = document.getElementById('customCoverFile').files[0];
@@ -97,7 +124,8 @@
 
                 let lyricContent = '';
                 if (hasLyric && lyricsText) {
-                    lyricContent = convertLyricsToFormat(lyricsText);
+                    // 所有歌词都直接使用输入内容，不添加时间标签
+                    lyricContent = lyricsText;
                 }
 
                 const songData = {
@@ -106,7 +134,7 @@
                         song_author: artist || '未知艺术家',
                         song_file: audioFileName,
                         cover_file: coverFileName,
-                        has_scroll_lyric: hasLyric,
+                        has_scroll_lyric: isScrollLyric,
                         song_lyric: lyricContent
                     }]
                 };
